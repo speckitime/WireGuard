@@ -432,6 +432,7 @@ echo "📍 Installationsverzeichnis: $INSTALL_DIR"
 echo "🌐 Frontend URL: http://$SERVER_DOMAIN"
 if [ "$SETUP_SSL" = "y" ] || [ "$SETUP_SSL" = "Y" ]; then
     echo "🔒 HTTPS URL: https://$SERVER_DOMAIN"
+    echo "🔐 SSL-Zertifikat: Automatische Erneuerung aktiviert"
 fi
 echo "🔧 Backend API: http://$SERVER_IP:$BACKEND_PORT/api"
 echo "📝 API Docs: http://$SERVER_IP:$BACKEND_PORT/docs"
