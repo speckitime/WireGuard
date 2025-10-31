@@ -249,7 +249,9 @@ environment=PATH="$INSTALL_DIR/venv/bin"
 EOF
 
 # Nginx Konfiguration
-cat > /etc/nginx/sites-available/wireguard-admin << EOF
+if [ "$SETUP_SSL" = "y" ] || [ "$SETUP_SSL" = "Y" ]; then
+    # HTTPS Configuration (SSL wird später von certbot hinzugefügt)
+    cat > /etc/nginx/sites-available/wireguard-admin << EOF
 server {
     listen $FRONTEND_PORT;
     server_name $SERVER_DOMAIN;
@@ -275,6 +277,35 @@ server {
     }
 }
 EOF
+else
+    # HTTP Only Configuration
+    cat > /etc/nginx/sites-available/wireguard-admin << EOF
+server {
+    listen $FRONTEND_PORT;
+    server_name $SERVER_DOMAIN;
+
+    # Frontend
+    root $INSTALL_DIR/frontend/build;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    # Backend API Proxy
+    location /api {
+        proxy_pass http://localhost:$BACKEND_PORT;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade \$http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host \$host;
+        proxy_cache_bypass \$http_upgrade;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    }
+}
+EOF
+fi
 
 # Aktiviere nginx site
 ln -sf /etc/nginx/sites-available/wireguard-admin /etc/nginx/sites-enabled/
