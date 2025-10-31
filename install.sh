@@ -81,12 +81,13 @@ print_info "Konfiguration gespeichert. Starte Installation..."
 sleep 2
 
 ###############################################################################
-# 1. System Update
+# 1. System Update & Basis-Tools
 ###############################################################################
 print_info "1/10 - System wird aktualisiert..."
 apt update -qq
 apt upgrade -y -qq
-print_success "System aktualisiert"
+apt install -y gnupg curl wget git software-properties-common >/dev/null 2>&1
+print_success "System aktualisiert und Basis-Tools installiert"
 
 ###############################################################################
 # 2. WireGuard installieren
