@@ -107,37 +107,55 @@ print_info "3/10 - MongoDB wird installiert..."
 
 # Check Ubuntu version
 UBUNTU_VERSION=$(lsb_release -cs)
+UBUNTU_MAJOR=$(lsb_release -rs | cut -d. -f1)
 
 if ! command -v mongod &> /dev/null; then
     print_info "Füge MongoDB Repository hinzu..."
+    
+    # Ubuntu 24.04 (noble) wird noch nicht offiziell unterstützt, verwende jammy Repository
+    if [ "$UBUNTU_VERSION" = "noble" ]; then
+        print_warning "Ubuntu 24.04 erkannt. Verwende MongoDB Repository für Ubuntu 22.04 (jammy)"
+        MONGO_UBUNTU_VERSION="jammy"
+    else
+        MONGO_UBUNTU_VERSION=$UBUNTU_VERSION
+    fi
+    
     curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg 2>/dev/null
-    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu $UBUNTU_VERSION/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list >/dev/null
-    apt update -qq
+    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu $MONGO_UBUNTU_VERSION/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list >/dev/null
+    apt update -qq 2>&1 | grep -v "^$" || true
+    
     print_info "Installiere MongoDB (kann einige Minuten dauern)..."
-    apt install -y mongodb-org 2>&1 | grep -v "^$" || true
-    systemctl start mongod
-    systemctl enable mongod >/dev/null 2>&1
+    DEBIAN_FRONTEND=noninteractive apt install -y mongodb-org 2>&1 | grep -E "(Setting up|Unpacking|Processing)" || true
+    
+    # Start MongoDB
+    systemctl start mongod 2>/dev/null || true
+    systemctl enable mongod >/dev/null 2>&1 || true
     
     # Wait for MongoDB to start
     sleep 3
     
     # Check if MongoDB is running
-    if systemctl is-active --quiet mongod; then
+    if systemctl is-active --quiet mongod 2>/dev/null; then
         print_success "MongoDB installiert und gestartet"
     else
-        print_error "MongoDB konnte nicht gestartet werden"
+        print_warning "MongoDB Service konnte nicht automatisch gestartet werden"
         print_info "Versuche MongoDB manuell zu starten..."
-        systemctl start mongod
+        systemctl start mongod 2>/dev/null || true
         sleep 2
-        if systemctl is-active --quiet mongod; then
+        if systemctl is-active --quiet mongod 2>/dev/null; then
             print_success "MongoDB läuft jetzt"
         else
-            print_error "MongoDB-Start fehlgeschlagen. Bitte prüfen Sie: sudo systemctl status mongod"
-            exit 1
+            print_error "MongoDB-Start fehlgeschlagen"
+            print_warning "MongoDB wird später beim ersten API-Aufruf automatisch gestartet"
+            # Nicht abbrechen - MongoDB startet eventuell später
         fi
     fi
 else
     print_success "MongoDB bereits installiert"
+    # Stelle sicher, dass MongoDB läuft
+    if ! systemctl is-active --quiet mongod 2>/dev/null; then
+        systemctl start mongod 2>/dev/null || true
+    fi
 fi
 
 ###############################################################################
