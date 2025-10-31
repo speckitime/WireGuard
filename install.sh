@@ -88,6 +88,13 @@ sleep 2
 # 1. System Update & Basis-Tools
 ###############################################################################
 print_info "1/10 - System wird aktualisiert..."
+
+# Entferne alte MongoDB-Repository-Dateien falls vorhanden
+if [ -f /etc/apt/sources.list.d/mongodb-org-7.0.list ]; then
+    print_info "Entferne alte MongoDB-Repository-Datei..."
+    rm -f /etc/apt/sources.list.d/mongodb-org-7.0.list
+fi
+
 apt update -qq
 apt upgrade -y -qq
 apt install -y gnupg curl wget git software-properties-common >/dev/null 2>&1
