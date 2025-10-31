@@ -76,6 +76,10 @@ BACKEND_PORT=${BACKEND_PORT:-8001}
 read -p "Frontend Port für nginx (Standard: 80): " FRONTEND_PORT
 FRONTEND_PORT=${FRONTEND_PORT:-80}
 
+read -p "SSL/HTTPS mit Let's Encrypt einrichten? (y/n): " SETUP_SSL
+
+read -p "Firewall (UFW) konfigurieren? (y/n): " SETUP_FIREWALL
+
 echo ""
 print_info "Konfiguration gespeichert. Starte Installation..."
 sleep 2
