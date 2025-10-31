@@ -376,11 +376,8 @@ systemctl restart nginx
 print_success "Services gestartet"
 
 ###############################################################################
-# Firewall konfigurieren (optional)
+# Firewall konfigurieren (wenn gewählt)
 ###############################################################################
-echo ""
-read -p "Firewall (UFW) konfigurieren? (y/n): " SETUP_FIREWALL
-
 if [ "$SETUP_FIREWALL" = "y" ] || [ "$SETUP_FIREWALL" = "Y" ]; then
     print_info "Firewall wird konfiguriert..."
     
@@ -394,11 +391,8 @@ if [ "$SETUP_FIREWALL" = "y" ] || [ "$SETUP_FIREWALL" = "Y" ]; then
 fi
 
 ###############################################################################
-# SSL Setup (optional)
+# SSL Setup (wenn gewählt)
 ###############################################################################
-echo ""
-read -p "SSL mit Let's Encrypt einrichten? (benötigt Domain) (y/n): " SETUP_SSL
-
 if [ "$SETUP_SSL" = "y" ] || [ "$SETUP_SSL" = "Y" ]; then
     print_info "SSL wird eingerichtet..."
     
