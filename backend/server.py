@@ -250,6 +250,13 @@ class WGStats(BaseModel):
     clients: List[dict]
 
 
+# Add your routes to the router instead of directly to app
+@api_router.get("/")
+@api_router.get("")
+async def root():
+    return {"message": "Hello World"}
+
+
 # Auth Routes
 @api_router.post("/auth/register", response_model=Token)
 async def register(user: UserRegister):
