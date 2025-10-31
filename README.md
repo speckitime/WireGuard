@@ -41,9 +41,11 @@ Das Skript führt Sie durch die Installation und fragt nach wichtigen Konfigurat
 - WireGuard Port (Standard: 51820)
 - Installationsverzeichnis
 - Firewall-Setup
-- SSL/HTTPS-Setup (optional)
+- **SSL/HTTPS-Setup mit Let's Encrypt (optional)**
 
 Nach der Installation ist das Panel sofort unter `http://IHRE-SERVER-IP` verfügbar!
+
+> 📘 **HTTPS einrichten**: Siehe [HTTPS_SETUP.md](HTTPS_SETUP.md) für detaillierte SSL-Anweisungen
 
 ---
 
