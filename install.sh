@@ -169,8 +169,40 @@ fi
 # 4. Python 3.11 installieren
 ###############################################################################
 print_info "4/10 - Python 3.11 wird installiert..."
-apt install -y python3.11 python3.11-venv python3-pip >/dev/null 2>&1
-print_success "Python 3.11 installiert"
+
+# Check Ubuntu version
+UBUNTU_MAJOR=$(lsb_release -rs | cut -d. -f1)
+
+if ! command -v python3.11 &> /dev/null; then
+    if [ "$UBUNTU_MAJOR" -ge 24 ]; then
+        # Ubuntu 24.04 und neuer - verwende Python 3.12 oder installiere 3.11 via PPA
+        if command -v python3.12 &> /dev/null; then
+            print_info "Ubuntu 24.04+ erkannt. Verwende Python 3.12 (kompatibel)..."
+            # Erstelle Symlink für python3.11
+            ln -sf /usr/bin/python3.12 /usr/local/bin/python3.11 2>/dev/null || true
+            apt install -y python3.12-venv python3-pip >/dev/null 2>&1
+        else
+            # Fallback: Installiere Python 3.11 via PPA
+            print_info "Installiere Python 3.11 via PPA..."
+            add-apt-repository -y ppa:deadsnakes/ppa >/dev/null 2>&1
+            apt update -qq 2>/dev/null
+            apt install -y python3.11 python3.11-venv python3-pip >/dev/null 2>&1
+        fi
+    else
+        # Ubuntu 20.04/22.04 - Python 3.11 direkt verfügbar
+        apt install -y python3.11 python3.11-venv python3-pip >/dev/null 2>&1
+    fi
+else
+    print_info "Python 3.11 bereits installiert"
+fi
+
+# Verify Python installation
+if command -v python3.11 &> /dev/null || command -v python3.12 &> /dev/null; then
+    print_success "Python installiert"
+else
+    print_error "Python-Installation fehlgeschlagen"
+    exit 1
+fi
 
 ###############################################################################
 # 5. Node.js und Yarn installieren
