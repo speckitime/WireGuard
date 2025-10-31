@@ -360,16 +360,35 @@ read -p "SSL mit Let's Encrypt einrichten? (benötigt Domain) (y/n): " SETUP_SSL
 if [ "$SETUP_SSL" = "y" ] || [ "$SETUP_SSL" = "Y" ]; then
     print_info "SSL wird eingerichtet..."
     
+    # Install certbot
     apt install -y certbot python3-certbot-nginx >/dev/null 2>&1
     
     read -p "E-Mail-Adresse für Let's Encrypt: " SSL_EMAIL
     
-    certbot --nginx -d "$SERVER_DOMAIN" --non-interactive --agree-tos -m "$SSL_EMAIL" >/dev/null 2>&1
+    # Run certbot
+    print_info "Certbot wird ausgeführt (kann einige Minuten dauern)..."
+    certbot --nginx -d "$SERVER_DOMAIN" --non-interactive --agree-tos -m "$SSL_EMAIL" --redirect
     
-    # Update Frontend .env for HTTPS
-    sed -i "s|http://|https://|g" "$INSTALL_DIR/frontend/.env"
-    
-    print_success "SSL eingerichtet"
+    if [ $? -eq 0 ]; then
+        # Update Frontend .env for HTTPS
+        sed -i "s|http://|https://|g" "$INSTALL_DIR/frontend/.env"
+        
+        # Rebuild frontend with HTTPS URL
+        print_info "Frontend wird mit HTTPS-URL neu gebaut..."
+        cd "$INSTALL_DIR/frontend"
+        yarn build >/dev/null 2>&1
+        
+        # Setup auto-renewal
+        systemctl enable certbot.timer >/dev/null 2>&1
+        
+        print_success "SSL eingerichtet und automatische Erneuerung aktiviert"
+    else
+        print_error "SSL-Setup fehlgeschlagen. Bitte überprüfen Sie:"
+        print_error "1. Domain $SERVER_DOMAIN zeigt auf $SERVER_IP"
+        print_error "2. Port 80 ist nicht blockiert"
+        print_error "3. Keine andere Website verwendet diese Domain"
+        print_warning "Sie können SSL später manuell einrichten mit: sudo certbot --nginx -d $SERVER_DOMAIN"
+    fi
 fi
 
 ###############################################################################
