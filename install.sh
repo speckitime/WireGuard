@@ -105,13 +105,33 @@ print_info "3/10 - MongoDB wird installiert..."
 UBUNTU_VERSION=$(lsb_release -cs)
 
 if ! command -v mongod &> /dev/null; then
-    curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg
-    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu $UBUNTU_VERSION/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list
+    print_info "Füge MongoDB Repository hinzu..."
+    curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg 2>/dev/null
+    echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu $UBUNTU_VERSION/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list >/dev/null
     apt update -qq
-    apt install -y mongodb-org >/dev/null 2>&1
+    print_info "Installiere MongoDB (kann einige Minuten dauern)..."
+    apt install -y mongodb-org 2>&1 | grep -v "^$" || true
     systemctl start mongod
     systemctl enable mongod >/dev/null 2>&1
-    print_success "MongoDB installiert und gestartet"
+    
+    # Wait for MongoDB to start
+    sleep 3
+    
+    # Check if MongoDB is running
+    if systemctl is-active --quiet mongod; then
+        print_success "MongoDB installiert und gestartet"
+    else
+        print_error "MongoDB konnte nicht gestartet werden"
+        print_info "Versuche MongoDB manuell zu starten..."
+        systemctl start mongod
+        sleep 2
+        if systemctl is-active --quiet mongod; then
+            print_success "MongoDB läuft jetzt"
+        else
+            print_error "MongoDB-Start fehlgeschlagen. Bitte prüfen Sie: sudo systemctl status mongod"
+            exit 1
+        fi
+    fi
 else
     print_success "MongoDB bereits installiert"
 fi
