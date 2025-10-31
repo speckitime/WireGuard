@@ -246,7 +246,16 @@ print_success "Projekt geklont"
 print_info "8/10 - Backend wird eingerichtet..."
 
 # Create virtual environment
-python3.11 -m venv venv
+if command -v python3.11 &> /dev/null; then
+    PYTHON_CMD="python3.11"
+elif command -v python3.12 &> /dev/null; then
+    PYTHON_CMD="python3.12"
+else
+    PYTHON_CMD="python3"
+fi
+
+print_info "Erstelle Python Virtual Environment mit $PYTHON_CMD..."
+$PYTHON_CMD -m venv venv
 source venv/bin/activate
 
 # Install dependencies
