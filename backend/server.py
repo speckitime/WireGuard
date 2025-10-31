@@ -49,6 +49,13 @@ SERVER_PORT = 51820
 SERVER_NETWORK = "10.8.0.0/24"
 SERVER_IP = "10.8.0.1"
 
+# SSH Configuration (for remote management)
+SSH_ENABLED = os.environ.get("SSH_ENABLED", "false").lower() == "true"
+SSH_HOST = os.environ.get("SSH_HOST", "")
+SSH_PORT = int(os.environ.get("SSH_PORT", "22"))
+SSH_USER = os.environ.get("SSH_USER", "root")
+SSH_KEY_PATH = os.environ.get("SSH_KEY_PATH", "")
+
 
 # Helper Functions
 def hash_password(password: str) -> str:
@@ -81,9 +88,23 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
         raise HTTPException(status_code=401, detail="Could not validate credentials")
 
 def run_command(cmd: List[str]) -> tuple[str, str, int]:
-    """Run a shell command and return stdout, stderr, and return code"""
+    """Run a shell command locally or via SSH"""
     try:
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        if SSH_ENABLED and SSH_HOST:
+            # Run command via SSH
+            ssh_cmd = [
+                "ssh",
+                "-i", SSH_KEY_PATH,
+                "-p", str(SSH_PORT),
+                "-o", "StrictHostKeyChecking=no",
+                f"{SSH_USER}@{SSH_HOST}",
+                " ".join(cmd)
+            ]
+            result = subprocess.run(ssh_cmd, capture_output=True, text=True, timeout=10)
+        else:
+            # Run command locally
+            result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
+        
         return result.stdout, result.stderr, result.returncode
     except subprocess.TimeoutExpired:
         return "", "Command timed out", 1
@@ -103,9 +124,23 @@ def generate_keypair() -> tuple[str, str]:
 
 def subprocess_communicate(stdin_data: bytes, cmd: List[str]) -> str:
     """Helper to pipe data through command"""
-    process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout, _ = process.communicate(input=stdin_data)
-    return stdout.decode().strip()
+    if SSH_ENABLED and SSH_HOST:
+        # For SSH, we need to handle piping differently
+        ssh_cmd = [
+            "ssh",
+            "-i", SSH_KEY_PATH,
+            "-p", str(SSH_PORT),
+            "-o", "StrictHostKeyChecking=no",
+            f"{SSH_USER}@{SSH_HOST}",
+            " ".join([str(c) for c in cmd])
+        ]
+        process = subprocess.Popen(ssh_cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, _ = process.communicate(input=stdin_data)
+        return stdout.decode().strip()
+    else:
+        process = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        stdout, _ = process.communicate(input=stdin_data)
+        return stdout.decode().strip()
 
 def generate_wg_keys() -> tuple[str, str]:
     """Generate WireGuard key pair"""
@@ -289,15 +324,25 @@ PostDown = iptables -D FORWARD -i %i -j ACCEPT; iptables -t nat -D POSTROUTING -
     
     # Write config file
     try:
-        WG_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-        config_file = WG_CONFIG_DIR / f"{WG_INTERFACE}.conf"
-        
-        # Write with sudo
-        with open("/tmp/wg0.conf", "w") as f:
-            f.write(config_content)
-        
-        run_command(["sudo", "cp", "/tmp/wg0.conf", str(config_file)])
-        run_command(["sudo", "chmod", "600", str(config_file)])
+        if SSH_ENABLED and SSH_HOST:
+            # Write config via SSH
+            run_command(["sudo", "mkdir", "-p", str(WG_CONFIG_DIR)])
+            # Create temp file locally then transfer
+            with open("/tmp/wg0.conf", "w") as f:
+                f.write(config_content)
+            run_command(["scp", "-i", SSH_KEY_PATH, "/tmp/wg0.conf", f"{SSH_USER}@{SSH_HOST}:/tmp/wg0.conf"])
+            run_command(["sudo", "cp", "/tmp/wg0.conf", f"{WG_CONFIG_DIR}/{WG_INTERFACE}.conf"])
+            run_command(["sudo", "chmod", "600", f"{WG_CONFIG_DIR}/{WG_INTERFACE}.conf"])
+        else:
+            # Write config locally
+            WG_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
+            config_file = WG_CONFIG_DIR / f"{WG_INTERFACE}.conf"
+            
+            with open("/tmp/wg0.conf", "w") as f:
+                f.write(config_content)
+            
+            run_command(["sudo", "cp", "/tmp/wg0.conf", str(config_file)])
+            run_command(["sudo", "chmod", "600", str(config_file)])
         
         return {"message": "Server initialized successfully", "public_key": public_key}
     except Exception as e:
@@ -405,7 +450,13 @@ async def create_client(client_data: WGClientCreate, current_user: str = Depends
         with open("/tmp/peer.conf", "w") as f:
             f.write(peer_config)
         
-        run_command(["sudo", "bash", "-c", f"cat /tmp/peer.conf >> /etc/wireguard/{WG_INTERFACE}.conf"])
+        if SSH_ENABLED and SSH_HOST:
+            # Transfer and append via SSH
+            run_command(["scp", "-i", SSH_KEY_PATH, "/tmp/peer.conf", f"{SSH_USER}@{SSH_HOST}:/tmp/peer.conf"])
+            run_command(["sudo", "bash", "-c", f"cat /tmp/peer.conf >> {WG_CONFIG_DIR}/{WG_INTERFACE}.conf"])
+        else:
+            # Append locally
+            run_command(["sudo", "bash", "-c", f"cat /tmp/peer.conf >> /etc/wireguard/{WG_INTERFACE}.conf"])
         
         # Reload if running
         wg_status = get_wg_status()
