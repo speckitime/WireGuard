@@ -36,6 +36,19 @@ sudo chmod +x install.sh
 sudo ./install.sh
 ```
 
+### Bei fehlgeschlagener Installation
+
+Falls eine vorherige Installation fehlgeschlagen ist, führen Sie zuerst das Cleanup-Skript aus:
+
+```bash
+# Cleanup alter Installation
+sudo chmod +x cleanup.sh
+sudo ./cleanup.sh
+
+# Dann Neuinstallation
+sudo ./install.sh
+```
+
 Das Skript führt Sie durch die Installation und fragt nach wichtigen Konfigurationsparametern:
 - Server IP-Adresse / Domain
 - WireGuard Port (Standard: 51820)
