@@ -120,9 +120,6 @@ fi
 # 4. Python 3.11 installieren
 ###############################################################################
 print_info "4/10 - Python 3.11 wird installiert..."
-apt install -y software-properties-common >/dev/null 2>&1
-add-apt-repository -y ppa:deadsnakes/ppa >/dev/null 2>&1
-apt update -qq
 apt install -y python3.11 python3.11-venv python3-pip >/dev/null 2>&1
 print_success "Python 3.11 installiert"
 
