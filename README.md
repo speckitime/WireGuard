@@ -22,7 +22,34 @@ Eine moderne Web-Administrationsoberfläche für WireGuard VPN-Server.
 - WireGuard
 - Sudo-Berechtigungen
 
-## Installation auf Ubuntu Server
+## Schnellinstallation (Empfohlen)
+
+Die einfachste Methode zur Installation:
+
+```bash
+# Repository klonen
+git clone https://github.com/speckitime/WireGuard.git
+cd WireGuard
+
+# Installationsskript ausführen
+sudo chmod +x install.sh
+sudo ./install.sh
+```
+
+Das Skript führt Sie durch die Installation und fragt nach wichtigen Konfigurationsparametern:
+- Server IP-Adresse / Domain
+- WireGuard Port (Standard: 51820)
+- Installationsverzeichnis
+- Firewall-Setup
+- SSL/HTTPS-Setup (optional)
+
+Nach der Installation ist das Panel sofort unter `http://IHRE-SERVER-IP` verfügbar!
+
+---
+
+## Manuelle Installation auf Ubuntu Server
+
+Falls Sie die Installation manuell durchführen möchten:
 
 ### 1. System-Pakete installieren
 
