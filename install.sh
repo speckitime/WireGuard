@@ -127,9 +127,11 @@ if ! command -v mongod &> /dev/null; then
         MONGO_UBUNTU_VERSION=$UBUNTU_VERSION
     fi
     
+    # -o flag überschreibt automatisch existierende Dateien
     curl -fsSL https://pgp.mongodb.com/server-7.0.asc | gpg --dearmor -o /usr/share/keyrings/mongodb-server-7.0.gpg 2>/dev/null
+    chmod 644 /usr/share/keyrings/mongodb-server-7.0.gpg
     echo "deb [ arch=amd64,arm64 signed-by=/usr/share/keyrings/mongodb-server-7.0.gpg ] https://repo.mongodb.org/apt/ubuntu $MONGO_UBUNTU_VERSION/mongodb-org/7.0 multiverse" | tee /etc/apt/sources.list.d/mongodb-org-7.0.list >/dev/null
-    apt update -qq 2>&1 | grep -v "^$" || true
+    apt update -qq 2>&1 | grep -E "(Reading|Building)" || true
     
     print_info "Installiere MongoDB (kann einige Minuten dauern)..."
     DEBIAN_FRONTEND=noninteractive apt install -y mongodb-org 2>&1 | grep -E "(Setting up|Unpacking|Processing)" || true
