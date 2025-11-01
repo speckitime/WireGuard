@@ -65,7 +65,7 @@ echo "  ${GREEN}9)${NC} WireGuard Server Setup prüfen und reparieren"
 echo "  ${GREEN}0)${NC} Alle Fixes nacheinander ausführen"
 echo "  ${RED}q)${NC} Beenden"
 echo ""
-read -p "Ihre Wahl [1-9,0]: " choice
+read -p "Ihre Wahl [1-9,0,q]: " choice
 
 case $choice in
 
