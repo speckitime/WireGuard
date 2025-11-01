@@ -293,9 +293,23 @@ cd "$INSTALL_DIR/frontend"
 yarn install >/dev/null 2>&1
 
 # Create .env file
-cat > .env << EOF
-REACT_APP_BACKEND_URL=http://${SERVER_IP}:${BACKEND_PORT}
+if [ "$SETUP_SSL" = "y" ] || [ "$SETUP_SSL" = "Y" ]; then
+    # HTTPS wurde gewählt - verwende Domain mit HTTPS
+    cat > .env << EOF
+REACT_APP_BACKEND_URL=https://${SERVER_DOMAIN}
+WDS_SOCKET_PORT=443
+REACT_APP_ENABLE_VISUAL_EDITS=false
+ENABLE_HEALTH_CHECK=false
 EOF
+else
+    # Nur HTTP - verwende Domain oder IP
+    cat > .env << EOF
+REACT_APP_BACKEND_URL=http://${SERVER_DOMAIN}
+WDS_SOCKET_PORT=80
+REACT_APP_ENABLE_VISUAL_EDITS=false
+ENABLE_HEALTH_CHECK=false
+EOF
+fi
 
 # Build frontend
 print_info "Frontend wird gebaut (kann einige Minuten dauern)..."
