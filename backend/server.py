@@ -89,6 +89,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 def run_command(cmd: List[str]) -> tuple[str, str, int]:
     """Run a shell command locally or via SSH"""
+    # Use full paths for system commands
+    cmd_map = {
+        "wg": "/usr/bin/wg",
+        "wg-quick": "/usr/bin/wg-quick",
+        "sudo": "/usr/bin/sudo"
+    }
+    
+    if cmd[0] in cmd_map:
+        cmd[0] = cmd_map[cmd[0]]
+    
     try:
         if SSH_ENABLED and SSH_HOST:
             # Run command via SSH
