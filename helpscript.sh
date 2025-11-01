@@ -61,8 +61,9 @@ echo "  ${GREEN}5)${NC} Vollständiger System-Test"
 echo "  ${GREEN}6)${NC} Cleanup - Alte Installation entfernen"
 echo "  ${GREEN}7)${NC} Alle Logs anzeigen"
 echo "  ${GREEN}8)${NC} Services neu starten (Backend + Nginx)"
-echo "  ${GREEN}9)${NC} Alle Fixes nacheinander ausführen"
-echo "  ${RED}0)${NC} Beenden"
+echo "  ${GREEN}9)${NC} WireGuard Server Setup prüfen und reparieren"
+echo "  ${GREEN}0)${NC} Alle Fixes nacheinander ausführen"
+echo "  ${RED}q)${NC} Beenden"
 echo ""
 read -p "Ihre Wahl [1-9,0]: " choice
 
