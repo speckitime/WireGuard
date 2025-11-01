@@ -96,8 +96,8 @@ def run_command(cmd: List[str]) -> tuple[str, str, int]:
         "sudo": "/usr/bin/sudo"
     }
     
-    if cmd[0] in cmd_map:
-        cmd[0] = cmd_map[cmd[0]]
+    # Replace all occurrences in the command, not just the first one
+    cmd = [cmd_map.get(c, c) for c in cmd]
     
     try:
         if SSH_ENABLED and SSH_HOST:
