@@ -397,9 +397,109 @@ EOF
     ;;
 
 ###############################################################################
-# 9. ALLE FIXES
+# 9. WIREGUARD SETUP PRÜFEN
 ###############################################################################
 9)
+    print_header "      WIREGUARD SERVER SETUP                   "
+    
+    print_info "1/7 - Prüfe WireGuard-Installation..."
+    if command -v wg &> /dev/null && command -v wg-quick &> /dev/null; then
+        print_success "WireGuard installiert"
+        wg version
+    else
+        print_error "WireGuard nicht installiert"
+        echo "Installiere WireGuard..."
+        apt update -qq
+        apt install -y wireguard wireguard-tools
+        print_success "WireGuard installiert"
+    fi
+    
+    print_info "2/7 - Prüfe Sudo-Berechtigungen..."
+    if [ -f /etc/sudoers.d/wireguard-admin ]; then
+        print_success "Sudoers-Datei existiert"
+        sudo -u www-data sudo /usr/bin/wg version &>/dev/null
+        if [ $? -eq 0 ]; then
+            print_success "www-data kann wg ausführen"
+        else
+            print_error "www-data kann wg NICHT ausführen"
+        fi
+    else
+        print_error "Sudoers-Datei fehlt - wird erstellt..."
+        cat > /etc/sudoers.d/wireguard-admin << 'EOF'
+# WireGuard Admin Panel Berechtigungen
+www-data ALL=(ALL) NOPASSWD: /usr/bin/wg
+www-data ALL=(ALL) NOPASSWD: /usr/bin/wg-quick
+www-data ALL=(ALL) NOPASSWD: /bin/cp /tmp/wg0.conf /etc/wireguard/wg0.conf
+www-data ALL=(ALL) NOPASSWD: /bin/cp /tmp/peer.conf /etc/wireguard/*
+www-data ALL=(ALL) NOPASSWD: /bin/chmod 600 /etc/wireguard/*
+www-data ALL=(ALL) NOPASSWD: /bin/bash -c cat /tmp/peer.conf >> /etc/wireguard/wg0.conf
+www-data ALL=(ALL) NOPASSWD: /bin/mkdir -p /etc/wireguard
+EOF
+        chmod 440 /etc/sudoers.d/wireguard-admin
+        print_success "Sudoers-Datei erstellt"
+    fi
+    
+    print_info "3/7 - Prüfe /etc/wireguard Verzeichnis..."
+    mkdir -p /etc/wireguard
+    chmod 700 /etc/wireguard
+    print_success "Verzeichnis OK"
+    
+    print_info "4/7 - Prüfe IP-Forwarding..."
+    FORWARD=$(sysctl net.ipv4.ip_forward | awk '{print $3}')
+    if [ "$FORWARD" = "1" ]; then
+        print_success "IP-Forwarding aktiviert"
+    else
+        sysctl -w net.ipv4.ip_forward=1 >/dev/null
+        sysctl -w net.ipv6.conf.all.forwarding=1 >/dev/null
+        if ! grep -q "net.ipv4.ip_forward=1" /etc/sysctl.conf; then
+            echo "net.ipv4.ip_forward=1" >> /etc/sysctl.conf
+            echo "net.ipv6.conf.all.forwarding=1" >> /etc/sysctl.conf
+        fi
+        print_success "IP-Forwarding aktiviert"
+    fi
+    
+    print_info "5/7 - Teste Schlüssel-Generierung..."
+    TEST_KEY=$(sudo -u www-data /usr/bin/wg genkey 2>/dev/null)
+    if [ $? -eq 0 ] && [ ! -z "$TEST_KEY" ]; then
+        print_success "Schlüssel-Generierung funktioniert"
+        echo "    Key: ${TEST_KEY:0:15}..."
+    else
+        print_error "Schlüssel-Generierung fehlgeschlagen"
+    fi
+    
+    print_info "6/7 - Backend neu starten..."
+    supervisorctl restart wireguard-backend
+    sleep 3
+    supervisorctl status wireguard-backend
+    
+    print_info "7/7 - Teste Server-Init API..."
+    TOKEN=$(curl -s -X POST http://localhost:8001/api/auth/register \
+      -H "Content-Type: application/json" \
+      -d '{"username":"wgtest_'$(date +%s)'","password":"Test123!"}' | \
+      python3 -c "import sys, json; print(json.load(sys.stdin)['access_token'])" 2>/dev/null)
+    
+    if [ ! -z "$TOKEN" ]; then
+        INIT_RESPONSE=$(curl -s -X POST http://localhost:8001/api/wg/server/init \
+          -H "Authorization: Bearer $TOKEN")
+        
+        if echo "$INIT_RESPONSE" | grep -q "public_key\|already initialized"; then
+            print_success "Server-Initialisierung funktioniert!"
+        else
+            print_error "Server-Initialisierung fehlgeschlagen"
+            echo "Response: $INIT_RESPONSE"
+        fi
+    else
+        print_error "Konnte Test-Token nicht erhalten"
+    fi
+    
+    echo ""
+    print_success "WireGuard Setup geprüft!"
+    ;;
+
+###############################################################################
+# 0. ALLE FIXES
+###############################################################################
+0)
     print_header "      ALLE FIXES AUSFÜHREN                    "
     
     print_info "1/5 - Backend reparieren..."
