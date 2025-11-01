@@ -498,6 +498,99 @@ EOF
     ;;
 
 ###############################################################################
+# 10. VPN ROUTING/NAT REPARIEREN
+###############################################################################
+10)
+    print_header "      VPN ROUTING/NAT REPARATUR                 "
+    
+    print_info "1/6 - Erkenne Netzwerk-Interface..."
+    # Finde das Haupt-Interface (nicht lo, nicht wg0)
+    IFACE=$(ip route | grep default | awk '{print $5}' | head -n1)
+    if [ -z "$IFACE" ]; then
+        IFACE=$(ip -o -4 route show to default | awk '{print $5}' | head -n1)
+    fi
+    
+    if [ -z "$IFACE" ]; then
+        print_error "Konnte Netzwerk-Interface nicht finden!"
+        echo "Verfügbare Interfaces:"
+        ip link show
+        read -p "Welches Interface verwenden? (z.B. eth0, ens3, ens5): " IFACE
+    fi
+    
+    print_success "Verwende Interface: $IFACE"
+    
+    print_info "2/6 - Prüfe IP-Forwarding..."
+    sysctl -w net.ipv4.ip_forward=1 >/dev/null
+    sysctl -w net.ipv6.conf.all.forwarding=1 >/dev/null
+    print_success "IP-Forwarding aktiviert"
+    
+    print_info "3/6 - Aktualisiere WireGuard-Konfiguration..."
+    if [ -f /etc/wireguard/wg0.conf ]; then
+        # Backup erstellen
+        cp /etc/wireguard/wg0.conf /etc/wireguard/wg0.conf.bak
+        
+        # Ersetze eth0 mit dem echten Interface
+        sed -i "s/eth0/$IFACE/g" /etc/wireguard/wg0.conf
+        
+        print_success "Interface in wg0.conf aktualisiert"
+        
+        echo "Aktuelle PostUp/PostDown Regeln:"
+        grep -E "PostUp|PostDown" /etc/wireguard/wg0.conf
+    else
+        print_error "wg0.conf nicht gefunden"
+    fi
+    
+    print_info "4/6 - Richte iptables-Regeln manuell ein..."
+    
+    # Räume alte Regeln auf
+    iptables -D FORWARD -i wg0 -j ACCEPT 2>/dev/null
+    iptables -t nat -D POSTROUTING -o $IFACE -j MASQUERADE 2>/dev/null
+    
+    # Füge neue Regeln hinzu
+    iptables -A FORWARD -i wg0 -j ACCEPT
+    iptables -t nat -A POSTROUTING -o $IFACE -j MASQUERADE
+    
+    print_success "iptables-Regeln eingerichtet"
+    
+    print_info "5/6 - Prüfe WireGuard-Status..."
+    if wg show wg0 &>/dev/null; then
+        echo "WireGuard läuft. Starte neu..."
+        wg-quick down wg0 2>/dev/null
+        sleep 1
+        wg-quick up wg0
+        print_success "WireGuard neu gestartet"
+    else
+        echo "WireGuard läuft nicht. Starte..."
+        wg-quick up wg0
+        print_success "WireGuard gestartet"
+    fi
+    
+    print_info "6/6 - Zeige aktuelle Konfiguration..."
+    echo ""
+    echo "WireGuard Interface:"
+    wg show wg0 2>/dev/null | head -10
+    
+    echo ""
+    echo "iptables NAT-Regeln:"
+    iptables -t nat -L POSTROUTING -n -v | grep -E "$IFACE|Chain"
+    
+    echo ""
+    echo "iptables FORWARD-Regeln:"
+    iptables -L FORWARD -n -v | grep -E "wg0|Chain"
+    
+    echo ""
+    print_success "VPN Routing repariert!"
+    echo ""
+    print_info "Teste die VPN-Verbindung:"
+    echo "1. Verbinde mit WireGuard-Client"
+    echo "2. Teste: ping 8.8.8.8"
+    echo "3. Teste: ping google.com"
+    echo "4. Wenn immer noch kein Internet:"
+    echo "   - Prüfe Firewall: sudo ufw status"
+    echo "   - Prüfe DNS in Client-Config"
+    ;;
+
+###############################################################################
 # 0. ALLE FIXES
 ###############################################################################
 0)
