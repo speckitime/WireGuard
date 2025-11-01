@@ -36,13 +36,30 @@ sudo chmod +x install.sh
 sudo ./install.sh
 ```
 
-### Bei fehlgeschlagener Installation
+### Bei Problemen nach der Installation
 
-Falls eine vorherige Installation fehlgeschlagen ist, führen Sie zuerst das Cleanup-Skript aus:
+Falls Probleme auftreten, verwenden Sie das Hilfs-Tool:
 
 ```bash
-# Cleanup alter Installation
-sudo chmod +x cleanup.sh
+# Interaktives Hilfs-Tool starten
+sudo ./helpscript.sh
+```
+
+**Das Hilfs-Tool bietet:**
+- ✅ Vollständige Diagnose aller Services
+- ✅ Backend-Reparatur
+- ✅ HTTPS-Konfiguration prüfen/reparieren
+- ✅ Frontend-URL korrigieren
+- ✅ Logs anzeigen
+- ✅ Services neu starten
+- ✅ Cleanup für Neuinstallation
+
+### Bei fehlgeschlagener Installation
+
+Falls eine vorherige Installation fehlgeschlagen ist:
+
+```bash
+# Cleanup ausführen
 sudo ./cleanup.sh
 
 # Dann Neuinstallation
