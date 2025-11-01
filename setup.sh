@@ -281,12 +281,33 @@ rm -f /etc/nginx/sites-enabled/default
 
 chown -R www-data:www-data "$INSTALL_DIR"
 
+# Starte supervisor service zuerst
 systemctl restart supervisor
-supervisorctl reread
-supervisorctl update
-supervisorctl start wireguard-backend
+sleep 2
 
-nginx -t
+# Warte bis supervisor socket bereit ist
+timeout=10
+while [ ! -S /var/run/supervisor.sock ] && [ $timeout -gt 0 ]; do
+    sleep 1
+    timeout=$((timeout-1))
+done
+
+if [ -S /var/run/supervisor.sock ]; then
+    supervisorctl reread
+    supervisorctl update
+    supervisorctl start wireguard-backend
+    sleep 2
+    print_success "Backend gestartet"
+else
+    print_warning "Supervisor socket nicht bereit - starte manuell"
+    systemctl restart supervisor
+    sleep 3
+    supervisorctl reread
+    supervisorctl update
+    supervisorctl start wireguard-backend
+fi
+
+nginx -t >/dev/null 2>&1
 systemctl restart nginx
 
 print_success "Services konfiguriert"
