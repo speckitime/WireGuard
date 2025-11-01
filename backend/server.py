@@ -124,6 +124,10 @@ def generate_keypair() -> tuple[str, str]:
 
 def subprocess_communicate(stdin_data: bytes, cmd: List[str]) -> str:
     """Helper to pipe data through command"""
+    # Use full paths for system commands
+    if cmd[0] == "wg":
+        cmd[0] = "/usr/bin/wg"
+    
     if SSH_ENABLED and SSH_HOST:
         # For SSH, we need to handle piping differently
         ssh_cmd = [
