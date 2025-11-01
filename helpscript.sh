@@ -66,7 +66,7 @@ echo "  ${GREEN}10)${NC} VPN Routing/NAT reparieren (kein Internet über Tunnel)
 echo "  ${GREEN}0)${NC} Alle Fixes nacheinander ausführen"
 echo "  ${RED}q)${NC} Beenden"
 echo ""
-read -p "Ihre Wahl [1-9,0,q]: " choice
+read -p "Ihre Wahl [1-10,0,q]: " choice
 
 case $choice in
 
